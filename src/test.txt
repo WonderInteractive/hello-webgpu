@@ -1,0 +1,15 @@
+RHICreateBuffer() {
+    EM_ASYNC(code);
+}
+RHICreateBuffer() { 
+    EM_PTHREADFS(code);
+}
+RHICreateBuffer() {
+    Enqueue(action);
+    Wait();
+}
+
+test queue using reqest animation callback
+
+try queing up function calls
+using request animation frame, can do non blocking try_dequeue

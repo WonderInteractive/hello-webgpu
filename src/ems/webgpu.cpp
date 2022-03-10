@@ -23,7 +23,7 @@ WGPUDevice webgpu::create(window::Handle /*window*/, WGPUBackendType /*type*/) {
 WGPUSwapChain webgpu::createSwapChain(WGPUDevice device) {
 	WGPUSurfaceDescriptorFromCanvasHTMLSelector canvDesc = {};
 	canvDesc.chain.sType = WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
-	canvDesc.selector = "canvas";
+	canvDesc.selector = "#canvas";
 	
 	WGPUSurfaceDescriptor surfDesc = {};
 	surfDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&canvDesc);
@@ -33,8 +33,8 @@ WGPUSwapChain webgpu::createSwapChain(WGPUDevice device) {
 	WGPUSwapChainDescriptor swapDesc = {};
 	swapDesc.usage  = WGPUTextureUsage_RenderAttachment;
 	swapDesc.format = WGPUTextureFormat_BGRA8Unorm;
-	swapDesc.width  = 800;
-	swapDesc.height = 450;
+	swapDesc.width  = 300;
+	swapDesc.height = 150;
 	swapDesc.presentMode = WGPUPresentMode_Fifo;
 	
 	WGPUSwapChain swapchain = wgpuDeviceCreateSwapChain(device, surface, &swapDesc);

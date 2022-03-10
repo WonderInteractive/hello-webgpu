@@ -221,7 +221,10 @@ WGPUSwapChain webgpu::createSwapChain(WGPUDevice device) {
 	swapDesc.presentMode = WGPUPresentMode_Mailbox;
 	 */
 	swapDesc.implementation = reinterpret_cast<uintptr_t>(&impl::swapImpl);
+	EM_ASM(console.log('test3'));
 	WGPUSwapChain swapchain = wgpuDeviceCreateSwapChain(device, nullptr, &swapDesc);
+	
+	EM_ASM(console.log('test3'));
 	/*
 	 * Currently failing on hi-DPI (with Vulkan).
 	 */
