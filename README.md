@@ -1,3 +1,8 @@
+No build tool setup for test.cpp yet (for testing sync costs without webgpu)
+Use this to build
+cls && emcc test.cpp -o out/web/test.html -lpthread -s PROXY_TO_PTHREAD=1 -s USE_PTHREADS --profiling-funcs  -s NO_EXIT_RUNTIME=1 -O3
+
+can run locally with 'emrun out/web/test.html'
 # "Hello, Triangle" WebGPU and Dawn
 
 [![MSVC workflow](https://github.com/cwoffenden/hello-webgpu/actions/workflows/msbuild.yml/badge.svg)](https://github.com/cwoffenden/hello-webgpu/actions/workflows/msbuild.yml) [![Xcode workflow](https://github.com/cwoffenden/hello-webgpu/actions/workflows/xcode.yml/badge.svg)](https://github.com/cwoffenden/hello-webgpu/actions/workflows/xcode.yml) [![Emscripten workflow](https://github.com/cwoffenden/hello-webgpu/actions/workflows/emscripten.yml/badge.svg)](https://github.com/cwoffenden/hello-webgpu/actions/workflows/emscripten.yml)
