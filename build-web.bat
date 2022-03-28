@@ -10,7 +10,7 @@ if "%~1"=="/d" (
 )
 
 set CPP_FLAGS=-std=c++20 -Wcast-align -Wover-aligned -Wno-nonportable-include-path -fno-exceptions -fno-rtti
-set EMS_FLAGS= --output_eol linux -lpthread -s USE_PTHREADS -s ALLOW_MEMORY_GROWTH=0  -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s USE_WEBGPU=1 -s PTHREAD_POOL_SIZE=3 -s PTHREAD_POOL_SIZE_STRICT=2 -s OFFSCREENCANVAS_SUPPORT=1
+set EMS_FLAGS= --output_eol linux -lpthread -s USE_PTHREADS -s ALLOW_MEMORY_GROWTH=0  -s NO_EXIT_RUNTIME=1 -s NO_FILESYSTEM=1 -s USE_WEBGPU=1 -s PTHREAD_POOL_SIZE=4 -s PTHREAD_POOL_SIZE_STRICT=2 -s OFFSCREENCANVAS_SUPPORT=1
 set OPT_FLAGS=
 
 if %DEBUG%==true (
@@ -20,7 +20,7 @@ if %DEBUG%==true (
 ) else (
   set CPP_FLAGS=%CPP_FLAGS% -g3 -DNDEBUG=1
   set EMS_FLAGS=%EMS_FLAGS% -g3 -s ASSERTIONS=2 -s EVAL_CTORS=0 -s SUPPORT_ERRNO=1 
-  set OPT_FLAGS=%OPT_FLAGS% -O0 
+  set OPT_FLAGS=%OPT_FLAGS% -O3
 )
 
 set SRC=
