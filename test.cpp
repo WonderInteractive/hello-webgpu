@@ -159,6 +159,7 @@ void yieldToJS() {
     func_and_type.store(yieldPtr);
     func_and_type.notify_one();
     #else
+    wait2(&func_and_type2, 0);
     __c11_atomic_store((_Atomic(uint32_t) *)&func_and_type2, (uintptr_t)yieldPtr, __ATOMIC_SEQ_CST);
     __builtin_wasm_memory_atomic_notify((int *)&func_and_type2, 1);
     #endif
@@ -171,8 +172,8 @@ static volatile std::atomic<uint64_t> ret{0};
 inline void simpleTest() {
         WEBGPU_EXEC({
             uint64_t v1 = 0;
-            for (int i = 0; i < 1000; ++i) {
-                v1 += 5;
+            for (uint64_t i = 0; i < 1000; ++i) {
+                v1 += 1;
                 //return5();
             }
             ret += v1;
@@ -180,7 +181,6 @@ inline void simpleTest() {
         }, 1);
 }
 int main() {
-    printf("starting\n");
     thread1 = std::thread([](){
         printf("starting thread\n");
         loop_atomic_start();
