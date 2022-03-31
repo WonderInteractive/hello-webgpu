@@ -5,12 +5,20 @@
 #include <emscripten.h>
 #include <emscripten/threading.h>
 #include "src/concurrentqueue/concurrentqueue.h"
-moodycamel::ConcurrentQueue<void*> eventQueue1(1024);
+#include "src/atomic_queue/atomic_queue.h"
+moodycamel::ConcurrentQueue<void*> eventQueue1(10000);
+using Element = uint32_t; // Queue element type.
+    Element constexpr NIL = static_cast<Element>(-1); // Atomic elements require a special value that cannot be pushed/popped.
+    using Queue = atomic_queue::AtomicQueueB<Element, std::allocator<Element>, NIL>; // Use heap-allocated buffer.
+
+    // Create a queue object shared between producers and consumers.
+    Queue q{10000};
 #define print(text) EM_ASM(console.log(text));
 #define CPP_ATOMICS 0
-#define C11_ATOMICS 1
-#define USING_QUEUE 0
-void* yieldPtr = (void*)-1;
+#define C11_ATOMICS 0
+#define USING_MOODY 0
+#define USING_AQ 1
+void* yieldPtr = (void*)-2;
 std::thread thread1;
 std::atomic<void*> func_and_type{nullptr};
 void* func_and_type2 = nullptr;
@@ -30,7 +38,7 @@ void wait2(volatile void *address, int on) {
 		state = emscripten_atomic_load_u32((void*)address);
 }
 void wait(volatile void *address, int on) {
-	volatile auto ret = __builtin_wasm_memory_atomic_wait32((int*)&func_and_type2, on, -1);
+	volatile auto ret = __builtin_wasm_memory_atomic_wait32((int*)func_and_type2, on, -1);
 }
 void getTypeV_atomic(void*(func)(void* v)) {
     auto ptr2 = (uintptr_t)func;
@@ -42,22 +50,16 @@ void getTypeV_atomic(void*(func)(void* v)) {
 		func(__VA_ARGS__);\
 		return nullptr;\
 	});
-#if USING_QUEUE
-#if 0
-#define WEBGPU_START doing++; eventQueue1.enqueue((void*)static_cast<void*(*)(void)>([]() -> void* {
-#define WEBGPU_END doing--; return nullptr; }));
-//#define WEBGPU_WAIT while(eventQueue1.size_approx() > 0){};
+#if USING_MOODY
+#define WEBGPU_EXEC(code, var) eventQueue1.enqueue((void*)static_cast<void*(*)(void)>([]() -> void* { code doing--; return nullptr; }));
 #define WEBGPU_WAIT while(doing > 0){};
 #define WEBGPU_YIELD WEBGPU_WAIT yieldToJS();
-#else
-#define WEBGPU_START doing++; eventQueue1.enqueue((void*)static_cast<void*(*)(void)>([]() -> void* {
-#define WEBGPU_END doing--; return nullptr; }));
-//#define WEBGPU_WAIT while(eventQueue1.size_approx() > 0){};
-#define WEBGPU_WAIT while(doing > 0){};
-#define WEBGPU_YIELD WEBGPU_WAIT yieldToJS();
-#endif
-#else
+#elif C11_ATOMICS
 #define WEBGPU_EXEC(code, var) doing++; getTypeV_atomic([](void* v = nullptr) -> void* { code doing--; return nullptr; });
+#define WEBGPU_WAIT while(doing > 0){};
+#define WEBGPU_YIELD WEBGPU_WAIT yieldToJS();
+#elif USING_AQ
+#define WEBGPU_EXEC(code, var) doing++; q.push((Element)static_cast<void*(*)(void)>([]() -> void* { code doing--; return nullptr; }));
 #define WEBGPU_WAIT while(doing > 0){};
 #define WEBGPU_YIELD WEBGPU_WAIT yieldToJS();
 #endif
@@ -88,6 +90,11 @@ int return1() {
 #define return1(...) PUSH(return2, __VA_ARGS__)
 KEEP_IN_MODULE void loop_mutex() {
 }
+static volatile std::atomic<uint64_t> ret{0};
+double start1 = 0.0;
+uint64_t N = 1000;
+uint64_t N2 = 1000;
+uint64_t T = 2;
 KEEP_IN_MODULE void loop_atomic() {
 	while(1) {
         #if CPP_ATOMICS
@@ -119,13 +126,39 @@ KEEP_IN_MODULE void loop_atomic() {
         //if(needsRet) {
         //    wait1(func_and_type2, (int)ptr);
         //}
-        #else
+        #elif USING_MOODY
         while(1) {
 		void* evt;
 		while (eventQueue1.try_dequeue(evt)) {
             auto f = (void*(*)())evt;
 			if (evt != yieldPtr)
 				auto ptr = f();
+			else {
+				EM_ASM(Module.channel.port2.postMessage(""););
+				return;
+			}
+		}
+        //printf("size of queue %d\n", eventQueue1.size_approx());
+	    }
+        #elif USING_AQ
+        if (start1 == 0.0) {
+            start1 = EM_ASM_DOUBLE(return performance.now());
+        }
+        while(1) {
+		Element evt;
+		while (q.try_pop(evt)) {
+            auto f = (void*(*)())evt;
+			if (evt != (Element)yieldPtr){
+				auto ptr = f();
+                auto r = ret.load();
+                if (r == N * N2 * T) {
+                    auto end = EM_ASM_DOUBLE(return performance.now()) - start1;
+                    
+                    printf("sync  void (%" PRIu64 ") : time %f %f\n", r, end, start1);
+                    start1 = EM_ASM_DOUBLE(return performance.now());
+                    ret = 0;
+                }
+            }
 			else {
 				EM_ASM(Module.channel.port2.postMessage(""););
 				return;
@@ -155,24 +188,29 @@ void loop_atomic_start() {
 	});
 }
 void yieldToJS() {
+    //return;
     #if CPP_ATOMICS
     func_and_type.store(yieldPtr);
     func_and_type.notify_one();
-    #else
+    #elif C11_ATOMICS
     wait2(&func_and_type2, 0);
     __c11_atomic_store((_Atomic(uint32_t) *)&func_and_type2, (uintptr_t)yieldPtr, __ATOMIC_SEQ_CST);
     __builtin_wasm_memory_atomic_notify((int *)&func_and_type2, 1);
+    #elif USING_MOODY
+    eventQueue1.enqueue(yieldPtr);
+    #elif USING_AQ
+    q.push((Element)yieldPtr);
     #endif
 }
 //compare with proxied asyncify using a queue (actually probably cant use a queue without waiting, so do direct)
 //compare with proxied looper thread
 //compare with pthreadfs
 //do we need to wait with a queue at all if we always return promised objects?
-static volatile std::atomic<uint64_t> ret{0};
+
 inline void simpleTest() {
         WEBGPU_EXEC({
             uint64_t v1 = 0;
-            for (uint64_t i = 0; i < 1000; ++i) {
+            for (uint64_t i = 0; i < N2; ++i) {
                 v1 += 1;
                 //return5();
             }
@@ -186,8 +224,23 @@ int main() {
         loop_atomic_start();
     });
     thread1.detach();
-    uint64_t N = 1000;
     //sync test - atomics
+    #if 1
+    std::vector<std::thread> threads;
+    for (int i = 0; i < T; ++i)
+        threads.push_back(std::thread([](){
+            for(;;){
+                for (uint64_t i = 0; i < N; ++i) {
+                    simpleTest();
+                    WEBGPU_YIELD
+                }
+                WEBGPU_YIELD
+            }
+        }));
+    for (int i = 0; i < T; ++i)
+        threads[i].join();
+    exit(1);
+    #endif
     auto start = emscripten_get_now();
     for (;;) {
         ret = 0;
