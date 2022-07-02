@@ -151,7 +151,6 @@ protected:
         b.head_.store(h, X);
         b.tail_.store(t, X);
     }
-
     template<class T, T NIL>
     static T do_pop_atomic(std::atomic<T>& q_element) noexcept {
         if(Derived::spsc_) {
@@ -171,9 +170,14 @@ protected:
                 if(ATOMIC_QUEUE_LIKELY(element != NIL))
                     return element;
                 // Do speculative loads while busy-waiting to avoid broadcasting RFO messages.
-                do
-                    spin_loop_pause();
-                while(Derived::maximize_throughput_ && q_element.load(X) == NIL);
+                volatile int func = 0;
+                //while(1){func++;}
+                //__builtin_wasm_memory_atomic_wait32((int*)&func, 0, -1);
+                do {
+                    //__builtin_wasm_memory_atomic_wait32((int*)&func, 0, -1);
+                    q_element.wait(NIL);
+                    //exit(1);
+                } while(Derived::maximize_throughput_ && q_element.load(X) == NIL);
             }
         }
     }
@@ -194,6 +198,7 @@ protected:
                 while(Derived::maximize_throughput_ && q_element.load(X) != NIL);
             }
         }
+        q_element.notify_one();
     }
 
     enum State : unsigned char { EMPTY, STORING, STORED, LOADING };
