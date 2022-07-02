@@ -353,7 +353,7 @@ KEEP_IN_MODULE void dispatch() {
     auto x = std::ceil(width / 8);
     auto y = std::ceil(height / 8);
 	wgpuComputePassEncoderDispatch(computeEncoder, x, y, 1);
-	wgpuComputePassEncoderEndPass(computeEncoder);
+	wgpuComputePassEncoderEnd(computeEncoder);
 	WGPUBufferDescriptor desc = {};
 	desc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
 	desc.size  = pixels.size() * 4;
@@ -411,7 +411,7 @@ KEEP_IN_MODULE bool redraw() {
 	wgpuRenderPassEncoderSetIndexBuffer(pass, indxBuf, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
 	wgpuRenderPassEncoderDrawIndexed(pass, 3, 1, 0, 0, 0);
 
-	wgpuRenderPassEncoderEndPass(pass);
+	wgpuRenderPassEncoderEnd(pass);
 	wgpuRenderPassEncoderRelease(pass);														// release pass
 	WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, nullptr);				// create commands
 	wgpuCommandEncoderRelease(encoder);														// release encoder

@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.9)
 
 project(hello-webgpu)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -Wno-nonportable-include-path -fno-exceptions -fno-rtti")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -Wno-nonportable-include-path -fno-exceptions -fno-rtti -s PTHREAD_POOL_SIZE=3 -s PTHREAD_POOL_SIZE_STRICT=2 -s OFFSCREENCANVAS_SUPPORT=1 -lpthread -s USE_PTHREADS")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -D_DEBUG=1 -Wno-unused -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g0 -DNDEBUG=1 -flto -O3")
 
@@ -21,7 +22,7 @@ if (EMSCRIPTEN)
 	set(CMAKE_EXE_LINKER_FLAGS "-s ASSERTIONS=0 -s EVAL_CTORS=0 -s WASM=1 -s USE_WEBGPU=1 -s NO_EXIT_RUNTIME=1 -s STRICT=1 --shell-file ${CMAKE_CURRENT_LIST_DIR}/src/ems/shell.html")
 
 	# Linker flags to optimize for smallest output code size
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web -s MINIMAL_RUNTIME=2 -s TEXTDECODER=2 -s ABORTING_MALLOC=0 -s ALLOW_MEMORY_GROWTH=0 -s SUPPORT_ERRNO=0 -s MALLOC=emmalloc -s NO_FILESYSTEM=1 --output_eol=linux")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ENVIRONMENT=web,worker -s MINIMAL_RUNTIME=2 -s TEXTDECODER=2 -s ABORTING_MALLOC=0 -s ALLOW_MEMORY_GROWTH=0 -s SUPPORT_ERRNO=0 -s MALLOC=emmalloc -s NO_FILESYSTEM=1 --output_eol=linux")
 elseif (WIN32)
 	file(GLOB_RECURSE platform_sources src/win/*)
 elseif (APPLE)
